@@ -6,10 +6,12 @@
 - Create a test environment for HA VPN for further troubleshooting or configuration testing.
 - The setup can also help investigating on BPG session flap or Cloud Router related issus.
 
-1. Provisioning customer VPCs and 4 subnets to achieve HA setup
+1. Provisioning customer VPCs and 4 subnets to achieve HA setup, flow log enabled.
 2. Provision VPN gateway and Cloud Router resources
 3. Provisioning 4 VPN tunnels on the 2 interfaces on each Cloud Router
 4. Provision BGP sessions on the created 4 VPN tunnels
+5. Create 1 VM without external IP in each VPC, total 2 VMs.
+6. Create Firewall rule on each side to allow ingress from specific ports
 
 ### Reference
 
