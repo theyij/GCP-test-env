@@ -17,6 +17,13 @@ resource "google_compute_subnetwork" "test-vpc1_subnet1" {
   ip_cidr_range = "172.16.1.0/24"
   region        = "asia-northeast1"
   network       = google_compute_network.test-vpc1.id
+
+  # Enable flow log for troubleshooting purpose
+  log_config {
+    aggregation_interval = "INTERVAL_10_MIN"
+    flow_sampling        = 0.5
+    metadata             = "INCLUDE_ALL_METADATA"
+  }  
 }
 
 resource "google_compute_subnetwork" "test-vpc1_subnet2" {
@@ -24,6 +31,12 @@ resource "google_compute_subnetwork" "test-vpc1_subnet2" {
   ip_cidr_range = "172.16.2.0/24"
   region        = "us-west1"
   network       = google_compute_network.test-vpc1.id
+
+  log_config {
+    aggregation_interval = "INTERVAL_10_MIN"
+    flow_sampling        = 0.5
+    metadata             = "INCLUDE_ALL_METADATA"
+  }
 }
 
 resource "google_compute_subnetwork" "test-vpc2_subnet1" {
@@ -31,6 +44,12 @@ resource "google_compute_subnetwork" "test-vpc2_subnet1" {
   ip_cidr_range = "192.168.1.0/24"
   region        = "asia-northeast1"
   network       = google_compute_network.test-vpc2.id
+
+  log_config {
+    aggregation_interval = "INTERVAL_10_MIN"
+    flow_sampling        = 0.5
+    metadata             = "INCLUDE_ALL_METADATA"
+  }
 }
 
 resource "google_compute_subnetwork" "test-vpc2_subnet2" {
@@ -38,6 +57,12 @@ resource "google_compute_subnetwork" "test-vpc2_subnet2" {
   ip_cidr_range = "192.168.2.0/24"
   region        = "us-east1"
   network       = google_compute_network.test-vpc2.id
+
+  log_config {
+    aggregation_interval = "INTERVAL_10_MIN"
+    flow_sampling        = 0.5
+    metadata             = "INCLUDE_ALL_METADATA"
+  }
 }
 
 
@@ -193,4 +218,93 @@ resource "google_compute_router_peer" "router2_peer2" {
   peer_asn                  = 64514
   advertised_route_priority = 100
   interface                 = google_compute_router_interface.router2_interface2.name
+}
+
+
+# Provision VM in each VPC
+
+resource "google_compute_instance" "vm1" {
+  name         = "tf-vm1"
+  machine_type = "n1-standard-1"
+  zone         = "asia-northeast1-a"
+
+  tags = ["tf", "allow"]
+  
+  boot_disk {
+    initialize_params {
+      image = "centos-stream-9"
+    }
+  }
+
+  network_interface {
+    network = google_compute_network.test-vpc1.id
+    subnetwork = google_compute_subnetwork.test-vpc1_subnet1.id
+
+    # access_config {
+    #   nat_ip = ""
+    # }
+  }
+
+
+  # metadata_startup_script {}
+
+}
+
+resource "google_compute_instance" "vm2" {
+  name         = "tf-vm2"
+  machine_type = "n1-standard-1"
+  zone         = "asia-northeast1-b"
+
+  tags = ["tf", "allow"]
+  
+  boot_disk {
+    initialize_params {
+      image = "centos-stream-9"
+    }
+  }
+
+  network_interface {
+    network = google_compute_network.test-vpc2.id
+    subnetwork = google_compute_subnetwork.test-vpc2_subnet1.id
+
+    #access_config {
+        # nat_ip = ""
+    #}    
+  }
+}
+
+# Create firewall rules to allow traffic between VPCs
+
+resource "google_compute_firewall" "peering-fw1" {
+  name    = "tf-fw1"
+  network = google_compute_network.test-vpc2.id
+
+  allow {
+    protocol = "icmp"
+  }
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80", "8080", "1000-2000"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  # target_tags = ["allow"]
+}
+
+resource "google_compute_firewall" "peering-fw2" {
+  name    = "tf-fw2"
+  network = google_compute_network.test-vpc1.id
+
+  allow {
+    protocol = "icmp"
+  }
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80", "8080", "1000-2000"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  # target_tags = ["allow"]
 }
